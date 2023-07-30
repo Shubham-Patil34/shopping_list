@@ -7,7 +7,17 @@ const itemFilter = document.getElementById('filter');
 // It wil not alter when a item is added or removed => define in function scope
 // const items = itemList.querySelectorAll('li');
 
-//-******************************* Add list item *******************************-//
+//-***************** Load list items from storage *********************-//
+function displayItems() {
+  const itemsFromStorage = getItemFromLocalStorage();
+
+  itemsFromStorage.forEach((item) => {
+    addItemToDOM(item);
+  });
+  checkUI();
+}
+
+//-*************************** Add list item ***************************-//
 // Trigger functionality
 /**
  *
@@ -15,26 +25,37 @@ const itemFilter = document.getElementById('filter');
  * @returns nothing
  * creates a list item in shoppinglist with list text, and a X button
  */
-function additem(event) {
+function onAddItemSubmit(event) {
   event.preventDefault();
+
+  const newItem = itemInput.value;
   // Validate Input
-  if (itemInput.value === '') {
+  if (newItem === '') {
     alert('Please add an item');
     return;
   }
 
+  // Add item to DOM
+  addItemToDOM(newItem);
+
+  // Add item to local storage
+  addItemToLocalStorage(newItem);
+
+  checkUI();
+}
+
+function addItemToDOM(item) {
   // Create list item
   const li = document.createElement('li');
 
   // Add respective properties
-  li.textContent = itemInput.value;
+  li.textContent = item;
   btn = createButton('remove-item btn-link text-red');
 
   li.appendChild(btn);
 
   itemList.appendChild(li);
   itemInput.value = '';
-  checkUI();
 }
 
 /**
@@ -72,16 +93,62 @@ function createIcon(classes) {
   return i;
 }
 
-//-******************************* Remove list item *******************************-//
+function addItemToLocalStorage(item) {
+  const itemsFromStorage = getItemFromLocalStorage();
 
-// Remove list item using delegation: Target parent and then child so if any child is added dynamically will also be considered
-function removeItem(event) {
-  if (event.target.parentElement.classList.contains('remove-item')) {
-    if (confirm('Are you sure?')) {
-      event.target.parentElement.parentElement.remove();
-      checkUI();
-    }
+  // Push new item to array
+  itemsFromStorage.push(item);
+
+  // Convert to JSON string and set to local storage
+  localStorage.setItem('items', JSON.stringify(itemsFromStorage));
+}
+
+function getItemFromLocalStorage() {
+  let itemsFromStorage;
+
+  // Get items from local storage into an array
+  if (localStorage.getItem('items') === null) {
+    itemsFromStorage = [];
+  } else {
+    itemsFromStorage = JSON.parse(localStorage.getItem('items'));
   }
+
+  return itemsFromStorage;
+}
+
+//-************************* Remove list item *************************-//
+function onClickItem(event) {
+  if (event.target.parentElement.classList.contains('remove-item')) {
+    removeItemFromDOM(event.target.parentElement.parentElement);
+  }
+}
+// Remove list item using delegation: Target parent and then child so if any child is added dynamically will also be considered
+function removeItemFromDOM(item) {
+  if (confirm('Are you sure?')) {
+    // Remove item from local storage
+    removeItemFromLocalStorage(item);
+
+    // Remove item from UI
+    item.remove();
+    checkUI();
+  }
+}
+
+function removeItemFromLocalStorage(item) {
+  let itemsFromStorage = getItemFromLocalStorage();
+
+  // const index = itemsFromStorage.indexOf(item.textContent);
+
+  // itemsFromStorage = [
+  //   ...itemsFromStorage.slice(0, index),
+  //   ...itemsFromStorage.slice(index + 1),
+  // ];
+
+  // Alternate: Using filter
+  itemsFromStorage = itemsFromStorage.filter((i) => i !== item.textContent);
+
+  // Re-set to local storage
+  localStorage.setItem('items', JSON.stringify(itemsFromStorage));
 }
 
 function highLight(event) {
@@ -98,19 +165,23 @@ function undoHighLight(event) {
   }
 }
 
-//-******************************* Remove all list items: Clear *******************************-//
+//-****************** Remove all list items: Clear *********************-//
 function clearAllItems(event) {
   if (confirm('Are you sure?')) {
     while (itemList.firstChild) {
+      // Remove all list items from local storage
+      // localStorage.removeItem(itemList.firstChild.textContent.toLowerCase());
       itemList.removeChild(itemList.firstChild);
     }
+
+    // Clear local storage
+    localStorage.removeItem('items');
+    // localStorage.clear(); Will clear all storage Not and issue for this application.. still avoid
     checkUI();
   }
 }
 
-clearBtn.addEventListener('click', clearAllItems);
-
-//-******************************* Check UI status *******************************-//
+//-************************** Check UI status ***************************-//
 function checkUI() {
   const items = itemList.querySelectorAll('li');
   if (items.length === 0) {
@@ -122,7 +193,7 @@ function checkUI() {
   }
 }
 
-//-******************************* filter items *******************************-//
+//-***************************** filter items ****************************-//
 function filterItems(event) {
   const items = itemList.querySelectorAll('li');
   const text = event.target.value.toLowerCase();
@@ -159,13 +230,45 @@ function filterItems(event) {
   // }
 }
 
-// Event listeners
-itemForm.addEventListener('submit', additem);
-itemInput.addEventListener('submit', additem);
-itemList.addEventListener('submit', additem);
-itemFilter.addEventListener('keyup', filterItems);
-itemList.addEventListener('click', removeItem);
-itemList.addEventListener('mouseover', highLight);
-itemList.addEventListener('mouseout', undoHighLight);
+/**
+ * Initialize application
+ */
+function init() {
+  // Event listeners
+  itemForm.addEventListener('submit', onAddItemSubmit);
+  itemInput.addEventListener('submit', onAddItemSubmit);
+  itemList.addEventListener('submit', onAddItemSubmit);
+  clearBtn.addEventListener('click', clearAllItems);
+  itemFilter.addEventListener('keyup', filterItems);
+  itemList.addEventListener('click', onClickItem);
+  itemList.addEventListener('mouseover', highLight);
+  itemList.addEventListener('mouseout', undoHighLight);
+  document.addEventListener('DOMContentLoaded', displayItems);
 
-checkUI();
+  checkUI();
+}
+
+init();
+
+//-****************** Load items from local storage *******************-//
+// Alretnate way using item itself in lower case
+
+// function loadItems(value) {
+//   // Create list item
+//   const li = document.createElement('li');
+
+//   // Add respective properties
+//   li.textContent = value;
+//   btn = createButton('remove-item btn-link text-red');
+
+//   li.appendChild(btn);
+
+//   itemList.appendChild(li);
+//   checkUI();
+// }
+
+// for (let i = 0; i < localStorage.length; i++) {
+//   let key = localStorage.key(i);
+//   // console.log(key);
+//   loadItems(localStorage.getItem(key));
+// }
