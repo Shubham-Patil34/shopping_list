@@ -4,6 +4,9 @@ const itemInput = document.getElementById('item-input');
 const itemList = document.getElementById('item-list');
 const clearBtn = document.getElementById('clear');
 const itemFilter = document.getElementById('filter');
+const formBtn = itemForm.querySelector('button');
+let isEditMode = false;
+
 // It wil not alter when a item is added or removed => define in function scope
 // const items = itemList.querySelectorAll('li');
 
@@ -35,12 +38,33 @@ function onAddItemSubmit(event) {
     return;
   }
 
-  // Add item to DOM
-  addItemToDOM(newItem);
+  // Check for edit mode
 
-  // Add item to local storage
-  addItemToLocalStorage(newItem);
+  if (isEditMode) {
+    const itemToEdit = itemList.querySelector('.edit-mode');
 
+    // Remove old item from DOM and local storage
+    itemToEdit.remove();
+    removeItemFromLocalStorage(itemToEdit);
+
+    // Add new value to DOM and local storage
+    const updatedItem = itemInput.value;
+    addItemToDOM(updatedItem);
+    addItemToLocalStorage(updatedItem);
+
+    itemToEdit.classList.remove('edit-mode');
+    isEditMode = false;
+  } else {
+    if (checkIfItemExists(newItem)) {
+      alert('Item already added to list..!');
+    } else {
+      // Add item to DOM
+      addItemToDOM(newItem);
+
+      // Add item to local storage
+      addItemToLocalStorage(newItem);
+    }
+  }
   checkUI();
 }
 
@@ -55,7 +79,6 @@ function addItemToDOM(item) {
   li.appendChild(btn);
 
   itemList.appendChild(li);
-  itemInput.value = '';
 }
 
 /**
@@ -116,12 +139,36 @@ function getItemFromLocalStorage() {
   return itemsFromStorage;
 }
 
+//-****************** Prevent duplicate list item *********************-//
+function checkIfItemExists(item) {
+  const itemsFromStorage = getItemFromLocalStorage();
+  if (itemsFromStorage.indexOf(item) !== -1) {
+    return true;
+  }
+  return false;
+}
+
 //-************************* Remove list item *************************-//
 function onClickItem(event) {
   if (event.target.parentElement.classList.contains('remove-item')) {
     removeItemFromDOM(event.target.parentElement.parentElement);
+  } else {
+    setItemToEdit(event.target);
   }
 }
+
+function setItemToEdit(item) {
+  isEditMode = true;
+  itemList
+    .querySelectorAll('li')
+    .forEach((item) => item.classList.remove('edit-mode'));
+
+  item.classList.add('edit-mode');
+  formBtn.innerHTML = '<i class="fa-solid fa-pen"></i> Update item';
+  itemInput.value = item.textContent;
+  formBtn.style.backgroundColor = '#228b22';
+}
+
 // Remove list item using delegation: Target parent and then child so if any child is added dynamically will also be considered
 function removeItemFromDOM(item) {
   if (confirm('Are you sure?')) {
@@ -183,6 +230,10 @@ function clearAllItems(event) {
 
 //-************************** Check UI status ***************************-//
 function checkUI() {
+  // Reset value of input to empty string
+  itemInput.value = '';
+
+  // Hide filter and cliear all button when there is no item in list
   const items = itemList.querySelectorAll('li');
   if (items.length === 0) {
     itemFilter.style.display = 'none';
@@ -191,6 +242,11 @@ function checkUI() {
     itemFilter.style.display = 'block';
     clearBtn.style.display = 'block';
   }
+
+  // Reset form button after editing is finished
+  formBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Item';
+  formBtn.style.backgroundColor = '#333';
+  isEditMode = false;
 }
 
 //-***************************** filter items ****************************-//
