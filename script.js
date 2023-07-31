@@ -159,6 +159,10 @@ function onClickItem(event) {
 
 function setItemToEdit(item) {
   isEditMode = true;
+
+  // Focus input field to edit
+  itemInput.focus();
+
   itemList
     .querySelectorAll('li')
     .forEach((item) => item.classList.remove('edit-mode'));
